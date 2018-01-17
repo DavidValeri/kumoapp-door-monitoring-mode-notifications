@@ -26,11 +26,22 @@
  * }
  */
 var states = {}
-var tags = <#Door or window tag used to trigger the application_[12|13|21|52]_N#>;
-var initialDelayMinutes = <%Delay the initial notification.  Enter the initial delay in minutes_N%>;
-var repeatDelayMinutes = <%Delay repeat notifications.  Enter the optional repeat delay in minutes, or 0 to disable repeat notifications_N%>;
-var enableBeeper = !!<%Enable the tag beeper once notification delay elapses.  Enter any number other than 0 to enable the tag beeper after the delay has elapsed_N%>;
-var iftttType = <%The "Type" used to trigger the IFTTT "New KumoApp message" trigger.  The value must be greater than 2 and less than or equal to 255_N%>;
+var tags = <#Door or window tags used to trigger the application_[12|13|21|52]_N#>;
+var initialDelayMinutes = <%The initial delay, in minutes, before the first notification_N%>;
+var repeatDelayMinutes = <%The delay, in minutes, between optional repeat notifications. Enter 0 to disable repeat notifications_N%>;
+var enableBeeper = !!<%Enable the tag beeper once notification delay elapses.  Enter 0 to disable the beeper and 1 to enable the tag beeper after the initial delay has elapsed_N%>;
+var iftttType = <%The "Type" used to trigger the IFTTT "New KumoApp message" trigger.  Enter 0 to disable and a value greater than 2 and less than or equal to 255 to enable IFTTT notifications_N%>;
+var emailAddressesString = <%The comma separated list of email addresses to notify.  Enter " " to disable email notifications%>;
+
+/**
+ * If IFTTT notifications are enabled.
+ */ 
+var enableIfttt = !!iftttType && iftttType > 2 && iftttType <= 255;
+
+/**
+ * The array of email addresses to notify.
+ */ 
+var emailAddresses = !!emailAddressesString && emailAddressesString.split(" *, *");
 
 var MILLISECONDS_PER_MIN = 60 * 1000;
 
@@ -47,11 +58,44 @@ function calculateOpenDurationInMinutes(state) {
  * or not in a log message.
  */
 function pluralize(value) {
-    return value !== 1 && value !== -1 ? "s" : "";
+  return value !== 1 && value !== -1 ? "s" : "";
 }
 
 /**
- * Stops the timer associated with state and removes the timer from state.
+ * Send notifications to all enabled notification systems.
+ */ 
+function notify(tagName, message) {
+    notifyIfttt(message);
+    notifyEmail(tagName, message);
+}
+
+/**
+ * Notify via IFTTT "New KumoApp message" trigger.
+ */
+function notifyIfttt(message) {
+  if (enableIfttt) {
+    KumoApp.Log(message, iftttType);
+  }
+  else {
+    KumoApp.Log(message);  
+  }
+}
+
+/**
+ * Notify via email.
+ */
+function notifyEmail(tagName, message) {
+  emailAddresses.forEach(
+      function(emailAddress) {
+         KumoApp.Email(
+             emailAddress,
+             "Update: " + tagName,
+             message);
+      });
+}
+
+/**
+ * Stops the timer associated with 'state' and removes the timer from 'state'.
  */
 function stopTimer(state) {
   if (state.timer) {
@@ -62,14 +106,14 @@ function stopTimer(state) {
 }
 
 /**
- * Handle the timer firing on state.
+ * Handle the timer firing on 'state'.
  */
 function onTimer(state) {
   var openDurationMinutes,
       minuteSuffix,
       message,
       timer = state.timer;
-    
+
   KumoApp.Log(
       "Handling timer [" + state.timer + "] for tag ["
           + state.tag.uuid + "]");
@@ -82,7 +126,7 @@ function onTimer(state) {
 
     if (state.isInitialDelay) {
       stopTimer(state);
-      if (repeatDelayMinutes > 0) {
+      if (!!repeatDelayMinutes && repeatDelayMinutes > 0) {
         state.timer = KumoApp.setInterval(
           function() {
             onTimer(state);
@@ -98,7 +142,7 @@ function onTimer(state) {
     message = state.tag.name + " open for " + openDurationMinutes + " minute"
         + minuteSuffix + "."
 
-    KumoApp.Log(message, iftttType);
+    notify(state.tag.name, message);
 
     KumoApp.Log(
       "Timer [" + timer + "] for tag ["
@@ -106,7 +150,7 @@ function onTimer(state) {
 }
 
 /**
- * Handle the open event for tag.
+ * Handle the open event for 'tag'.
  */
 function onOpen(tag) {
   KumoApp.Log("Handling tag [" + tag.uuid + "] open.");
@@ -131,7 +175,7 @@ function onOpen(tag) {
 }
 
 /**
- * Handle the close event for tag.
+ * Handle the close event for 'tag'.
  */
 function onClose(tag) {
   var state = states[tag.uuid],
@@ -156,15 +200,15 @@ function onClose(tag) {
           + openDurationMinutes + " minute"
           + minuteSuffix + ".";
 
-      KumoApp.Log(message, iftttType);
+      notify(state.tag.name, message)
     }
   }
   KumoApp.Log("Tag [" + tag.uuid + "] closed.");
 }
 
 /**
- * Examine a generic update on tag to cover the case of an tag in an open state
- * being disarmed without first being closed.
+ * Examine a generic updates on 'tag' to cover the case of an tag in an open
+ * state being disarmed without first being closed.
  */
 function onUpdate(tag) {
   var state = states[tag.uuid],
@@ -188,7 +232,7 @@ function onUpdate(tag) {
           + openDurationMinutes + " minute"
           + minuteSuffix + ".";
 
-      KumoApp.Log(message, iftttType);   
+      notify(state.tag.name, message);
     }
   }
   KumoApp.Log("Tag [" + tag.uuid + "] updated.");
