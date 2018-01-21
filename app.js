@@ -16,7 +16,9 @@
  
  /**
   * v1.0.0
-  * 
+  *
+  * https://github.com/DavidValeri/kumoapp-open-close-temperature
+  *
   * Configure multiple forms of notifications and optional repeat notifications 
   * based on opening and closing or temperature monitoring.
   *
