@@ -16,6 +16,24 @@
  
  /**
   * v1.0.0
+  * 
+  * Configure multiple forms of notifications and optional repeat notifications 
+  * based on opening and closing or temperature monitoring.
+  *
+  * While the capabilities here might seem like of duplication of those in the
+  * user interface, choosing a delayed response in the user interface also
+  * delays the event from entering the graphs and event log at the time it
+  * actually happened.  I find this behavior frustrating as the event log should
+  * be a log of events, not a log of when notifications were triggered.  I view
+  * these two aspects of the system as orthogonal and prefer to have an
+  * authoritative event list to view at a glance that is not contingent on the
+  * event triggering a notification.  Furthermore, when using the built-in
+  * notification delays, the event log becomes populated with unbalanced events
+  * as the log contains close events without corresponding open events.
+  *
+  * This application also introduces the ability to control the tag beeper as
+  * a notification mechanism.  This feature is not available in the user
+  * interface.
   */
  
 var MILLISECONDS_PER_MIN = 60 * 1000;
