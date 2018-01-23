@@ -34,8 +34,9 @@
   * as the log contains close events without corresponding open events.
   *
   * This application also introduces the ability to control the tag beeper as
-  * a notification mechanism.  This feature is not available in the user
-  * interface.
+  * a notification mechanism and to configure different notificaiton schemes
+  * for different notification mediums.  These features are not available in
+  * the user interface.
   */
  
 var MILLISECONDS_PER_MIN = 60 * 1000;
@@ -138,11 +139,16 @@ function notify(tagName, message) {
  * Notify via IFTTT "New KumoApp message" trigger.
  */
 function notifyIfttt(message) {
-  if (enableIfttt) {
-    KumoApp.Log(message, iftttType);
+  try {
+    if (enableIfttt) {
+      KumoApp.Log(message, iftttType);
+    }
+    else {
+      KumoApp.Log(message);  
+    }
   }
-  else {
-    KumoApp.Log(message);  
+  catch(e) {
+    KumoApp.Log("Error logging message / IFTTT trigger: " + e);
   }
 }
 
@@ -150,12 +156,18 @@ function notifyIfttt(message) {
  * Notify via email.
  */
 function notifyEmail(tagName, message) {
+  
   emailAddresses.forEach(
       function(emailAddress) {
-        KumoApp.Email(
-            emailAddress,
-            "Update: " + tagName,
-            message);
+        try {      
+          KumoApp.Email(
+              emailAddress,
+              "Update: " + tagName,
+              message);
+        }
+        catch(e) {
+          KumoApp.Log("Error notifying [" + emailAddress + "]: " + e);
+        }
       });
 }
 
@@ -163,13 +175,15 @@ function notifyEmail(tagName, message) {
  * Notify via push.
  */
 function notifyPush(tagName, message) {
-  emailAddresses.forEach(
-      function(emailAddress) {
-        pushTarget.push(
-            "Update: " + tagName,
-            message,
-            "Alarm Frenzy");
-      });
+  try {    
+    pushTarget.push(
+        "Update: " + tagName,
+        message,
+        "Alarm Frenzy");
+  }
+  catch(e) {
+    KumoApp.Log("Error notifying push targets: " + e);
+  }
 }
 
 /**
